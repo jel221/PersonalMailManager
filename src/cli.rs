@@ -21,6 +21,13 @@ pub fn build_cli() -> App<'static, 'static> {
 			.required(false)
 		)
 		.arg(
+			Arg::with_name("filter")
+			.short("f")
+			.help("filter")
+			.takes_value(true)
+			.required(false)
+		)
+		.arg(
 			Arg::with_name("dump")
 			.short("d")
 			.help("dump: output everything at once")

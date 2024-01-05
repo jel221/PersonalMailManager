@@ -2,8 +2,8 @@ mod cli;
 mod matcher;
 mod mail;
 
-fn main() {
+#[tokio::main]
+async fn main() {
 	let matches = cli::build_cli().get_matches();
-	mail::login().expect("Login failed");
-	matcher::execute(matches);
+	matcher::execute(matches).await;
 }

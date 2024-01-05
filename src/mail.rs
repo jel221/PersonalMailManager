@@ -1,50 +1,50 @@
 extern crate google_gmail1 as gmail1;
 use gmail1::api::Message;
+use gmail1::hyper::client::HttpConnector;
+use gmail1::hyper::client::connect::dns::GaiResolver;
+use gmail1::hyper_rustls::HttpsConnector;
 use gmail1::{Result, Error};
-use std::fs;
-use std::default::Default;
 use gmail1::{Gmail, oauth2, hyper, hyper_rustls, chrono, FieldMask};
 use std::path::Path;
+use std::fs;
 
-pub fn login() -> Result<()> {    
+async fn login() -> Gmail<HttpsConnector<HttpConnector>> {    
 	// Your Google Cloud Platform credentials file (JSON format)
-    let credentials_file = Path::new("../credentials.json");
+    let credentials_file = Path::new("../../credentials.json");
 
-    // Create a new hyper-based transport
-    let transport = Default::default().build().unwrap();
+	let secret: oauth2::ApplicationSecret = oauth2::read_application_secret(credentials_file)
+		.await
+		.expect("credentials file error");
 
-    // Create a Gmail hub
-    let hub = Gmail::new(
-        transport,
-        hyper::Client::builder().build(Default::default()),
-    );
+	let auth = oauth2::InstalledFlowAuthenticator::builder(
+        secret,
+        oauth2::InstalledFlowReturnMethod::HTTPRedirect,
+    	).build().await.unwrap();
 
-    // Authenticate
-    let mut key = oauth2::read_service_account_key(credentials_file)
-        .await
-        .expect("failed to read credentials");
-    key.set_subject("user@example.com"); // Replace with the user's email address
+	Gmail::new(
+		hyper::Client::builder().build(hyper_rustls::HttpsConnectorBuilder::new().with_native_roots().https_or_http().enable_http1().build()),
+		auth
+	)
+}
 
-    let token = key.token(&["https://www.googleapis.com/auth/gmail.readonly"])
-        .await
-        .expect("failed to obtain token");
+pub async fn get(aggr: Vec<&str>, dump: bool) -> Result<()> {
+	let mut hub = login().await;
+	
+	let email = fs::read_to_string("../../email.txt")
+		.expect("Please put your email in email.txt");
+	let mail_list = hub.users().messages_list(&email)
+		.q("is:unread");
 
-    // Set the authorization token
-    let hub = hub.set_auth_token(&token);
 
-    // Example: List the user's messages
-    let response = hub.users().messages_list("me").doit().await?;
-    if let Some(messages) = response.1.messages {
-        for message in messages {
-            println!("Message ID: {}", message.id.unwrap_or_default());
-        }
-    } else {
-        println!("No messages found.");
-    }
-
-    // Example: Get a specific message by ID
-    if let Ok(message) = get_message(&hub, "message_id_here").await {
-        println!("Message snippet: {}", message.snippet.unwrap_or_default());
-    }
 	Ok(())
+}
+
+pub async fn delete(aggr: Vec<&str>, _dump: bool) -> Result<()> {
+	let mut hub = login().await;
+
+	Ok(())
+}
+
+fn query_str(aggr: Vec<&str>) -> Result<&str> {
+	Ok(&"lol")
 }
